@@ -1,0 +1,12 @@
+services:
+  cryptoai-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: cryptoai:latest
+    container_name: cryptoai_mobile_web
+    ports:
+      - "8081:8081"
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production

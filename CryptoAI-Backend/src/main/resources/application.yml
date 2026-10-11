@@ -1,0 +1,70 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: cryptoai-backend
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/cryptoaidb}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      idle-timeout: 300000
+      connection-timeout: 20000
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    open-in-view: false
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ahmetdurmus2005@gmail.com
+    password: rksrcrpassllbrwd
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
+# Application Custom Security & JWT Properties
+app:
+  jwt:
+    # 256-bit minimum cryptographic secret key
+    secret: ${JWT_SECRET:c4b1d6f8e2a39158c70d4957e62a0487b92f39c4d8123e4f7a1b9c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f}
+    expiration-ms: 86400000 # 24 saat (86400000 ms)
+  mail:
+    from-name: "CryptoAI Security"
+    from-email: ${MAIL_USERNAME:no-reply@cryptoai.com}
+
+binance:
+  api:
+    base-url: ${BINANCE_API_URL:https://api.binance.com}
+    connect-timeout-ms: 5000
+    read-timeout-ms: 10000
+
+bot:
+  trading:
+    enabled: ${BOT_TRADING_ENABLED:true}
+    fixed-rate-ms: ${BOT_TRADING_FIXED_RATE_MS:5000}
+    take-profit-ratio: ${BOT_TAKE_PROFIT_RATIO:1.05}
+    stop-loss-ratio: ${BOT_STOP_LOSS_RATIO:0.97}
+    ai-buy-amount-usdt: ${BOT_AI_BUY_AMOUNT_USDT:100.0}
+    cooldown-seconds: ${BOT_COOLDOWN_SECONDS:60}
+
+

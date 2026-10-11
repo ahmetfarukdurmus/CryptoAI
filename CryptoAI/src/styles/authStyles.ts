@@ -1,0 +1,158 @@
+import { StyleSheet } from 'react-native';
+
+export const authStyles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
+  container: {
+    padding: 20,
+    paddingTop: 10,
+    justifyContent: 'center',
+    minHeight: '100%',
+  },
+  brandHeader: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  backBtn: {
+    alignSelf: 'flex-start',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    marginBottom: 10,
+  },
+  brandTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  brandSubtitle: {
+    fontSize: 12,
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  formCard: {
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+  },
+  formTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  nameRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 4,
+  },
+  inputGroup: {
+    marginBottom: 12,
+  },
+  inputLabel: {
+    fontSize: 12,
+    marginBottom: 6,
+    fontWeight: '600',
+  },
+  inputBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  inputIcon: {
+    marginRight: 8,
+  },
+  textInput: {
+    flex: 1,
+    fontSize: 14,
+  },
+  submitBtn: {
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: 'center',
+    marginTop: 8,
+    marginBottom: 14,
+  },
+  submitBtnText: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  switchAuthBtn: {
+    alignItems: 'center',
+  },
+  switchAuthText: {
+    fontSize: 12,
+  },
+  logoBadge: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  demoBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderRadius: 12,
+    paddingVertical: 12,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    marginBottom: 14,
+  },
+  demoBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  otpInputContainer: {
+    marginVertical: 16,
+    alignItems: 'center',
+  },
+  otpTextInput: {
+    fontSize: 28,
+    fontWeight: '800',
+    letterSpacing: 12,
+    textAlign: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    width: '100%',
+  },
+  otpEmailBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    marginBottom: 16,
+  },
+  otpEmailText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  resendBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    marginBottom: 12,
+  },
+  resendBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+});
