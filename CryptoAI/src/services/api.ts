@@ -100,10 +100,14 @@ export class ApiError extends Error {
 }
 
 async function request<T = any>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const baseUrl = getApiBaseUrl();
+  const baseUrl = getApiBaseUrl().replace(/\/$/, '');
+  let normalizedEndpoint = endpoint.replace(/^\//, '');
+  if (baseUrl.endsWith('/api') && normalizedEndpoint.startsWith('api/')) {
+    normalizedEndpoint = normalizedEndpoint.substring(4);
+  }
   const fullUrl = endpoint.startsWith('http')
     ? endpoint
-    : `${baseUrl.replace(/\/$/, '')}/${endpoint.replace(/^\//, '')}`;
+    : `${baseUrl}/${normalizedEndpoint}`;
 
   const headers: Record<string, string> = {
     'Accept': 'application/json',

@@ -1,10 +1,12 @@
 package com.cryptoai.backend.service;
 
+import com.cryptoai.backend.dto.request.GoogleAuthRequestDto;
 import com.cryptoai.backend.dto.request.LoginDto;
 import com.cryptoai.backend.dto.request.RegisterDto;
 import com.cryptoai.backend.dto.request.VerifyOtpDto;
 import com.cryptoai.backend.dto.response.ApiResponse;
 import com.cryptoai.backend.dto.response.AuthResponse;
+import com.cryptoai.backend.dto.response.AuthResponseDto;
 import com.cryptoai.backend.dto.response.RegisterResponse;
 
 public interface AuthService {
@@ -16,4 +18,6 @@ public interface AuthService {
     AuthResponse login(LoginDto loginDto);
 
     ApiResponse<String> resendOtp(String email);
+
+    AuthResponseDto googleLogin(GoogleAuthRequestDto request);
 }

@@ -27,7 +27,7 @@ interface AuthContextType {
   ) => Promise<{ success: boolean; error?: string; message?: string }>;
   register: (email: string, pass: string, fullName: string) => Promise<{ success: boolean; error?: string; message?: string }>;
   verifyOtp: (email: string, otp: string) => Promise<{ success: boolean; error?: string }>;
-  loginWithGoogle: () => Promise<{ success: boolean; error?: string }>;
+  loginWithGoogle: (idToken?: string) => Promise<{ success: boolean; error?: string }>;
   loginWithApple: () => Promise<boolean>;
   loginDemoUser: () => void;
   logout: () => Promise<void>;
@@ -295,23 +295,64 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const loginWithGoogle = async (): Promise<{ success: boolean; error?: string }> => {
-    // Mobile Google OAuth / Demo integration
-    const demoGoogleUser: UserProfile = {
-      id: 'google_usr_spring_boot',
-      name: 'Google Kullanıcısı',
-      firstName: 'Google',
-      lastName: 'Kullanıcısı',
-      email: 'user@google.com',
-      balance: 10000.0,
-      authProvider: 'google',
-      token: `google_spring_boot_token_${Date.now()}`,
-      isBiometricEnabled: true,
-    };
-    await setStoredUser(demoGoogleUser);
-    setUser(demoGoogleUser);
-    await recordActivity();
-    return { success: true };
+  const loginWithGoogle = async (
+    idToken?: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      if (idToken) {
+        const res = await authService.googleLogin(idToken);
+        if (!res.success) {
+          return { success: false, error: res.error || 'Google ile giriş başarısız oldu.' };
+        }
+
+        // Fetch fresh wallet balance from Spring Boot backend
+        const walletRes = await authService.getWallet();
+        const balance = walletRes.success ? walletRes.balance : 10000.0;
+
+        const userObj = res.user || {};
+        const fullName =
+          userObj.fullName || userObj.name || userObj.email?.split('@')[0] || 'Google Kullanıcısı';
+        const nameParts = fullName.trim().split(' ');
+
+        const profile: UserProfile = {
+          id: userObj.id || userObj.userId || `usr_${Date.now()}`,
+          name: fullName,
+          firstName: userObj.firstName || nameParts[0] || 'Google',
+          lastName: userObj.lastName || nameParts.slice(1).join(' ') || '',
+          email: userObj.email || '',
+          balance,
+          authProvider: 'google',
+          token: res.accessToken || (await getStoredToken()) || '',
+          isBiometricEnabled: true,
+        };
+
+        await setStoredUser(profile);
+        setUser(profile);
+        await recordActivity();
+
+        return { success: true };
+      }
+
+      // Fallback demo/development Google user when no idToken is provided
+      const demoGoogleUser: UserProfile = {
+        id: 'google_usr_spring_boot',
+        name: 'Google Kullanıcısı',
+        firstName: 'Google',
+        lastName: 'Kullanıcısı',
+        email: 'user@google.com',
+        balance: 10000.0,
+        authProvider: 'google',
+        token: `google_spring_boot_token_${Date.now()}`,
+        isBiometricEnabled: true,
+      };
+      await setStoredUser(demoGoogleUser);
+      setUser(demoGoogleUser);
+      await recordActivity();
+      return { success: true };
+    } catch (err: any) {
+      console.error('Google login context error:', err);
+      return { success: false, error: err?.message || 'Google ile giriş yapılamadı.' };
+    }
   };
 
   const loginWithApple = async (): Promise<boolean> => {

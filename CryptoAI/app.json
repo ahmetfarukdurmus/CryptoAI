@@ -2,6 +2,7 @@
   "expo": {
     "name": "CryptoAI",
     "slug": "CryptoAI",
+    "owner": "ahmetfarukdurmus",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -11,7 +12,8 @@
       "typedRoutes": true
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anonymous.CryptoAI"
     },
     "android": {
       "adaptiveIcon": {

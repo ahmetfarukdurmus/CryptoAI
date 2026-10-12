@@ -1,10 +1,12 @@
 package com.cryptoai.backend.service.impl;
 
+import com.cryptoai.backend.dto.request.GoogleAuthRequestDto;
 import com.cryptoai.backend.dto.request.LoginDto;
 import com.cryptoai.backend.dto.request.RegisterDto;
 import com.cryptoai.backend.dto.request.VerifyOtpDto;
 import com.cryptoai.backend.dto.response.ApiResponse;
 import com.cryptoai.backend.dto.response.AuthResponse;
+import com.cryptoai.backend.dto.response.AuthResponseDto;
 import com.cryptoai.backend.dto.response.RegisterResponse;
 import com.cryptoai.backend.entity.User;
 import com.cryptoai.backend.entity.Wallet;
@@ -14,8 +16,13 @@ import com.cryptoai.backend.repository.WalletRepository;
 import com.cryptoai.backend.security.JwtTokenProvider;
 import com.cryptoai.backend.service.AuthService;
 import com.cryptoai.backend.service.EmailService;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -24,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Service
 public class AuthServiceImpl implements AuthService {
@@ -35,10 +43,29 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final EmailService emailService;
+    private final GoogleIdTokenVerifier googleIdTokenVerifier;
 
     private static final int OTP_EXPIRATION_MINUTES = 10;
     private static final BigDecimal INITIAL_WALLET_BALANCE = new BigDecimal("10000.0000");
     private final SecureRandom secureRandom = new SecureRandom();
+
+    @Autowired
+    public AuthServiceImpl(
+            UserRepository userRepository,
+            WalletRepository walletRepository,
+            PasswordEncoder passwordEncoder,
+            JwtTokenProvider jwtTokenProvider,
+            EmailService emailService,
+            @Autowired(required = false) GoogleIdTokenVerifier googleIdTokenVerifier) {
+        this.userRepository = userRepository;
+        this.walletRepository = walletRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtTokenProvider = jwtTokenProvider;
+        this.emailService = emailService;
+        this.googleIdTokenVerifier = googleIdTokenVerifier != null
+                ? googleIdTokenVerifier
+                : new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), GsonFactory.getDefaultInstance()).build();
+    }
 
     public AuthServiceImpl(
             UserRepository userRepository,
@@ -46,11 +73,7 @@ public class AuthServiceImpl implements AuthService {
             PasswordEncoder passwordEncoder,
             JwtTokenProvider jwtTokenProvider,
             EmailService emailService) {
-        this.userRepository = userRepository;
-        this.walletRepository = walletRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.jwtTokenProvider = jwtTokenProvider;
-        this.emailService = emailService;
+        this(userRepository, walletRepository, passwordEncoder, jwtTokenProvider, emailService, null);
     }
 
     @Override
@@ -216,6 +239,111 @@ public class AuthServiceImpl implements AuthService {
         }
 
         return ApiResponse.success("Yeni doğrulama kodu e-posta adresinize gönderildi. (Geliştirme Kodu: " + otp + ")");
+    }
+
+    @Override
+    @Transactional
+    public AuthResponseDto googleLogin(GoogleAuthRequestDto request) {
+        if (request == null || request.getIdToken() == null || request.getIdToken().trim().isEmpty()) {
+            throw new ApiException("Google ID Token boş olamaz", HttpStatus.BAD_REQUEST);
+        }
+
+        String idTokenString = request.getIdToken().trim();
+        log.info("Google OAuth2 giriş talebi alındı");
+
+        GoogleIdToken idToken;
+        try {
+            idToken = googleIdTokenVerifier.verify(idTokenString);
+        } catch (Exception ex) {
+            log.error("Google ID Token doğrulanırken hata oluştu: {}", ex.getMessage());
+            throw new ApiException("Google kimlik doğrulama hatası: " + ex.getMessage(), HttpStatus.UNAUTHORIZED);
+        }
+
+        if (idToken == null) {
+            log.warn("Geçersiz veya süresi dolmuş Google ID Token tespit edildi");
+            throw new ApiException("Geçersiz veya süresi dolmuş Google ID Token", HttpStatus.UNAUTHORIZED);
+        }
+
+        GoogleIdToken.Payload payload = idToken.getPayload();
+        String email = payload.getEmail();
+        if (email == null || email.trim().isEmpty()) {
+            throw new ApiException("Google hesabından e-posta adresi alınamadı", HttpStatus.BAD_REQUEST);
+        }
+        String normalizedEmail = email.trim().toLowerCase();
+
+        String fullName = (String) payload.get("name");
+        if (fullName == null || fullName.trim().isEmpty()) {
+            String givenName = (String) payload.get("given_name");
+            String familyName = (String) payload.get("family_name");
+            if (givenName != null && !givenName.trim().isEmpty()) {
+                fullName = (givenName.trim() + (familyName != null && !familyName.trim().isEmpty() ? " " + familyName.trim() : "")).trim();
+            } else {
+                fullName = normalizedEmail.split("@")[0];
+            }
+        } else {
+            fullName = fullName.trim();
+        }
+
+        log.info("Google ile doğrulanan kullanıcı: email={}, fullName={}", normalizedEmail, fullName);
+
+        User user = userRepository.findByEmail(normalizedEmail).orElse(null);
+
+        if (user == null) {
+            // Yeni kullanıcı oluştur
+            String randomPassword = UUID.randomUUID().toString();
+            user = User.builder()
+                    .email(normalizedEmail)
+                    .fullName(fullName)
+                    .passwordHash(passwordEncoder.encode(randomPassword))
+                    .isVerified(true)
+                    .verificationOtp(null)
+                    .otpExpiresAt(null)
+                    .createdAt(LocalDateTime.now())
+                    .build();
+            user = userRepository.save(user);
+            log.info("Google ile yeni kullanıcı başarıyla kaydedildi: {}", normalizedEmail);
+        } else {
+            // Var olan kullanıcı Google ile giriş yaptıysa ve doğrulanmamışsa, doğrulanmış olarak işaretle
+            boolean updated = false;
+            if (!user.isVerified()) {
+                user.setVerified(true);
+                user.setVerificationOtp(null);
+                user.setOtpExpiresAt(null);
+                updated = true;
+            }
+            if (user.getFullName() == null || user.getFullName().trim().isEmpty()) {
+                user.setFullName(fullName);
+                updated = true;
+            }
+            if (updated) {
+                user = userRepository.save(user);
+            }
+            log.info("Mevcut kullanıcı Google ile giriş yaptı: {}", normalizedEmail);
+        }
+
+        // Kullanıcıya 10.000 USDT sanal cüzdan tanımla (varsa mevcut olanı kullan)
+        final User finalUser = user;
+        Wallet wallet = walletRepository.findByUser(user).orElseGet(() -> {
+            Wallet newWallet = Wallet.builder()
+                    .user(finalUser)
+                    .usdtBalance(INITIAL_WALLET_BALANCE)
+                    .build();
+            return walletRepository.save(newWallet);
+        });
+
+        // JWT token oluştur
+        String accessToken = jwtTokenProvider.generateToken(user.getId(), user.getEmail(), user.getFullName());
+
+        return AuthResponseDto.builder()
+                .accessToken(accessToken)
+                .tokenType("Bearer")
+                .userId(user.getId())
+                .email(user.getEmail())
+                .fullName(user.getFullName())
+                .isVerified(user.isVerified())
+                .walletId(wallet.getId())
+                .usdtBalance(wallet.getUsdtBalance())
+                .build();
     }
 
     private String generateOtp() {

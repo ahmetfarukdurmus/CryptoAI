@@ -47,6 +47,12 @@
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
+
+        <dependency>
+            <groupId>com.google.api-client</groupId>
+            <artifactId>google-api-client</artifactId>
+            <version>2.2.0</version>
+        </dependency>
         <!-- Spring Boot Starter Mail (JavaMailSender) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

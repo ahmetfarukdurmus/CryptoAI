@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useGoogleAuth } from '../../hooks/useGoogleAuth';
+import { GoogleIcon } from '../../components/common/GoogleIcon';
 import { Ionicons } from '@expo/vector-icons';
 import { authStyles as styles } from '../../styles/authStyles';
 
@@ -12,6 +14,7 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function LoginScreen() {
   const { loginWithEmail } = useAuth();
+  const { signInWithGoogle, loading: googleLoading } = useGoogleAuth();
   const { t } = useLanguage();
   const { colors } = useTheme();
 
@@ -25,6 +28,15 @@ export default function LoginScreen() {
       window.alert(`${title}\n${msg}`);
     } else {
       Alert.alert(title, msg);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    const res = await signInWithGoogle();
+    if (res.success) {
+      router.replace('/(tabs)');
+    } else if (!res.cancelled) {
+      showAlert('Giriş Başarısız', res.error || 'Google ile giriş yapılamadı.');
     }
   };
 
@@ -135,9 +147,45 @@ export default function LoginScreen() {
             onPress={handleLogin}
             activeOpacity={0.8}
             style={[styles.submitBtn, { backgroundColor: colors.primary }]}
-            disabled={loading}
+            disabled={loading || googleLoading}
           >
-            <Text style={[styles.submitBtnText, { color: colors.background }]}>{t('login_button')}</Text>
+            {loading ? (
+              <ActivityIndicator size="small" color={colors.background} />
+            ) : (
+              <Text style={[styles.submitBtnText, { color: colors.background }]}>{t('login_button')}</Text>
+            )}
+          </TouchableOpacity>
+
+          {/* Divider */}
+          <View style={styles.authDivider}>
+            <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+            <Text style={[styles.dividerText, { color: colors.textMuted }]}>{t('or_continue_with')}</Text>
+            <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+          </View>
+
+          {/* Google Sign-In Button */}
+          <TouchableOpacity
+            onPress={handleGoogleSignIn}
+            activeOpacity={0.8}
+            style={[
+              styles.googleBtn,
+              {
+                backgroundColor: colors.cardBgElevated || '#1E2329',
+                borderColor: colors.border,
+              },
+            ]}
+            disabled={loading || googleLoading}
+          >
+            {googleLoading ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <>
+                <GoogleIcon size={18} />
+                <Text style={[styles.googleBtnText, { color: colors.textPrimary }]}>
+                  {t('google_login')}
+                </Text>
+              </>
+            )}
           </TouchableOpacity>
 
           {/* Go to register */}

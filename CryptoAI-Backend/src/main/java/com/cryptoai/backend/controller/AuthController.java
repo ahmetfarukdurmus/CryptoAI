@@ -1,10 +1,12 @@
 package com.cryptoai.backend.controller;
 
+import com.cryptoai.backend.dto.request.GoogleAuthRequestDto;
 import com.cryptoai.backend.dto.request.LoginDto;
 import com.cryptoai.backend.dto.request.RegisterDto;
 import com.cryptoai.backend.dto.request.VerifyOtpDto;
 import com.cryptoai.backend.dto.response.ApiResponse;
 import com.cryptoai.backend.dto.response.AuthResponse;
+import com.cryptoai.backend.dto.response.AuthResponseDto;
 import com.cryptoai.backend.dto.response.RegisterResponse;
 import com.cryptoai.backend.service.AuthService;
 import jakarta.validation.Valid;
@@ -12,7 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping({"/api/auth", "/api/v1/auth"})
 public class AuthController {
 
     private final AuthService authService;
@@ -43,5 +45,11 @@ public class AuthController {
     public ResponseEntity<ApiResponse<String>> resendOtp(@RequestParam String email) {
         ApiResponse<String> response = authService.resendOtp(email);
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/google")
+    public ResponseEntity<ApiResponse<AuthResponseDto>> googleLogin(@Valid @RequestBody GoogleAuthRequestDto request) {
+        AuthResponseDto response = authService.googleLogin(request);
+        return ResponseEntity.ok(ApiResponse.success("Google ile giriş başarılı.", response));
     }
 }

@@ -25,6 +25,12 @@ export interface AuthResult<T = any> {
   data?: T;
 }
 
+export type AuthResponse<T = any> = AuthResult<T>;
+
+export interface GoogleLoginPayload {
+  idToken: string;
+}
+
 export interface WalletResult {
   success: boolean;
   balance: number;
@@ -158,6 +164,79 @@ class AuthService {
       return {
         success: false,
         error: error instanceof ApiError ? error.message : (error?.message || 'E-posta veya şifre hatalı.'),
+      };
+    }
+  }
+
+  /**
+   * Google ID Token ile sisteme giriş yapar.
+   * POST /api/v1/auth/google
+   * Body: { idToken: string }
+   * Standart AuthResponseDto (jwtToken, email, fullName vb.) döner.
+   * Başarılı olursa token ve kullanıcı bilgilerini AsyncStorage'a kaydeder.
+   */
+  async googleLogin(idToken: string): Promise<AuthResponse> {
+    try {
+      const trimmedToken = idToken.trim();
+      const response = await apiClient.post('/api/v1/auth/google', {
+        idToken: trimmedToken,
+      });
+
+      // Token çözümleme: jwtToken, accessToken, token vb.
+      const token =
+        response?.jwtToken ||
+        response?.accessToken ||
+        response?.token ||
+        response?.jwt ||
+        response?.data?.jwtToken ||
+        response?.data?.accessToken ||
+        response?.data?.token;
+
+      // Kullanıcı nesnesi çözümleme
+      const email = response?.email || response?.data?.email || '';
+      const fullName =
+        response?.fullName ||
+        response?.name ||
+        response?.data?.fullName ||
+        response?.data?.name ||
+        (email ? email.split('@')[0] : 'Google Kullanıcısı');
+
+      const nameParts = fullName.trim().split(' ');
+      const firstName = response?.firstName || nameParts[0] || 'Google';
+      const lastName = response?.lastName || nameParts.slice(1).join(' ') || '';
+
+      const userData = response?.user || response?.data?.user || {
+        id: response?.id || response?.userId || response?.data?.id || `usr_google_${Date.now()}`,
+        email,
+        name: fullName,
+        fullName,
+        firstName,
+        lastName,
+        authProvider: 'google',
+      };
+
+      if (token) {
+        await setStoredToken(token);
+      }
+      if (userData) {
+        await setStoredUser(userData);
+      }
+
+      return {
+        success: true,
+        accessToken: token,
+        user: userData,
+        message: response?.message || 'Google ile giriş başarılı.',
+        data: response,
+      };
+    } catch (error: any) {
+      console.error('Auth googleLogin error:', error);
+      return {
+        success: false,
+        error:
+          error instanceof ApiError
+            ? error.message
+            : (error?.message || 'Google ile giriş başarısız oldu.'),
       };
     }
   }
