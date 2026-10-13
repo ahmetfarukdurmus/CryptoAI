@@ -78,10 +78,10 @@ class AuthServiceTest {
     @Test
     @DisplayName("Kayıt olma başarılı senaryosu ve debugOtp kontrolü")
     void testRegisterSuccess() {
-        RegisterDto dto = new RegisterDto("test@cryptoai.com", "password123", "Test User");
+        RegisterDto dto = new RegisterDto("test@cryptoai.com", "Password123!", "Test User");
 
         when(userRepository.existsByEmail("test@cryptoai.com")).thenReturn(false);
-        when(passwordEncoder.encode("password123")).thenReturn("encodedPassword");
+        when(passwordEncoder.encode("Password123!")).thenReturn("encodedPassword");
         when(userRepository.save(any(User.class))).thenReturn(sampleUser);
 
         ApiResponse<RegisterResponse> response = authService.register(dto);
@@ -97,10 +97,10 @@ class AuthServiceTest {
     @Test
     @DisplayName("E-posta gönderimi hata verse bile kayıt başarılı olmalı")
     void testRegisterSuccessEvenIfEmailFails() {
-        RegisterDto dto = new RegisterDto("test@cryptoai.com", "password123", "Test User");
+        RegisterDto dto = new RegisterDto("test@cryptoai.com", "Password123!", "Test User");
 
         when(userRepository.existsByEmail("test@cryptoai.com")).thenReturn(false);
-        when(passwordEncoder.encode("password123")).thenReturn("encodedPassword");
+        when(passwordEncoder.encode("Password123!")).thenReturn("encodedPassword");
         when(userRepository.save(any(User.class))).thenReturn(sampleUser);
         doThrow(new RuntimeException("SMTP Server not reachable"))
                 .when(emailService).sendOtpEmail(anyString(), anyString(), anyString());
@@ -116,11 +116,71 @@ class AuthServiceTest {
     @Test
     @DisplayName("Var olan e-posta ile kayıt olunamamalı")
     void testRegisterConflict() {
-        RegisterDto dto = new RegisterDto("test@cryptoai.com", "password123", "Test User");
+        RegisterDto dto = new RegisterDto("test@cryptoai.com", "Password123!", "Test User");
         when(userRepository.existsByEmail("test@cryptoai.com")).thenReturn(true);
 
         ApiException ex = assertThrows(ApiException.class, () -> authService.register(dto));
         assertEquals(HttpStatus.CONFLICT, ex.getStatus());
+    }
+
+    @Test
+    @DisplayName("Büyük harf içermeyen zayıf şifrede 400 Bad Request dönmeli")
+    void testRegisterWeakPasswordNoUppercase() {
+        RegisterDto dto = new RegisterDto("test@cryptoai.com", "password123!", "Test User");
+
+        ApiException ex = assertThrows(ApiException.class, () -> authService.register(dto));
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatus());
+        assertTrue(ex.getMessage().contains("Şifre en az 8 karakter"));
+    }
+
+    @Test
+    @DisplayName("Küçük harf içermeyen zayıf şifrede 400 Bad Request dönmeli")
+    void testRegisterWeakPasswordNoLowercase() {
+        RegisterDto dto = new RegisterDto("test@cryptoai.com", "PASSWORD123!", "Test User");
+
+        ApiException ex = assertThrows(ApiException.class, () -> authService.register(dto));
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatus());
+        assertTrue(ex.getMessage().contains("Şifre en az 8 karakter"));
+    }
+
+    @Test
+    @DisplayName("Rakam içermeyen zayıf şifrede 400 Bad Request dönmeli")
+    void testRegisterWeakPasswordNoDigit() {
+        RegisterDto dto = new RegisterDto("test@cryptoai.com", "Password!", "Test User");
+
+        ApiException ex = assertThrows(ApiException.class, () -> authService.register(dto));
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatus());
+        assertTrue(ex.getMessage().contains("Şifre en az 8 karakter"));
+    }
+
+    @Test
+    @DisplayName("Özel karakter içermeyen zayıf şifrede 400 Bad Request dönmeli")
+    void testRegisterWeakPasswordNoSpecialChar() {
+        RegisterDto dto = new RegisterDto("test@cryptoai.com", "Password123", "Test User");
+
+        ApiException ex = assertThrows(ApiException.class, () -> authService.register(dto));
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatus());
+        assertTrue(ex.getMessage().contains("Şifre en az 8 karakter"));
+    }
+
+    @Test
+    @DisplayName("8 karakterden kısa şifrede 400 Bad Request dönmeli")
+    void testRegisterWeakPasswordTooShort() {
+        RegisterDto dto = new RegisterDto("test@cryptoai.com", "P@s1", "Test User");
+
+        ApiException ex = assertThrows(ApiException.class, () -> authService.register(dto));
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatus());
+        assertTrue(ex.getMessage().contains("Şifre en az 8 karakter"));
+    }
+
+    @Test
+    @DisplayName("Şifre boş veya null olduğunda 400 Bad Request dönmeli")
+    void testRegisterNullPassword() {
+        RegisterDto dto = new RegisterDto("test@cryptoai.com", null, "Test User");
+
+        ApiException ex = assertThrows(ApiException.class, () -> authService.register(dto));
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatus());
+        assertTrue(ex.getMessage().contains("Şifre en az 8 karakter"));
     }
 
     @Test

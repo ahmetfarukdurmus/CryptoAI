@@ -2,16 +2,24 @@ package com.cryptoai.backend.dto.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public class RegisterDto {
+
+    public static final String PASSWORD_REGEX = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&#^()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?~`]).{8,}$";
+    public static final String PASSWORD_ERROR_MESSAGE = "Şifre en az 8 karakter olmalı, en az bir büyük harf (A-Z), bir küçük harf (a-z), bir rakam (0-9) ve bir özel karakter (@$!%*?&# vb.) içermelidir";
 
     @NotBlank(message = "E-posta adresi boş bırakılamaz")
     @Email(message = "Lütfen geçerli bir e-posta adresi giriniz")
     private String email;
 
     @NotBlank(message = "Şifre alanı boş bırakılamaz")
-    @Size(min = 6, message = "Şifre en az 6 karakter olmalıdır")
+    @Size(min = 8, message = "Şifre en az 8 karakter olmalıdır")
+    @Pattern(
+            regexp = PASSWORD_REGEX,
+            message = PASSWORD_ERROR_MESSAGE
+    )
     private String password;
 
     @NotBlank(message = "Ad ve soyad alanı boş bırakılamaz")

@@ -184,4 +184,40 @@ export const authStyles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.2,
   },
+  passwordValidationCard: {
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: 10,
+    marginTop: 8,
+    marginBottom: 4,
+    gap: 6,
+  },
+  passwordValidationTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    marginBottom: 2,
+    letterSpacing: 0.3,
+  },
+  criteriaGrid: {
+    gap: 4,
+  },
+  criteriaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  criteriaText: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  inlineErrorText: {
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 4,
+    marginLeft: 2,
+  },
+  inputEyeBtn: {
+    padding: 4,
+    marginLeft: 4,
+  },
 });

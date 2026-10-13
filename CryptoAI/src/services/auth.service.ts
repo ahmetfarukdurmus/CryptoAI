@@ -225,8 +225,9 @@ class AuthService {
       const firstName = response?.firstName || nameParts[0] || 'Google';
       const lastName = response?.lastName || nameParts.slice(1).join(' ') || '';
 
-      const userData = response?.user || response?.data?.user || { fullName: response?.fullName, userId: response?.userId, 
+      const userData = response?.user || response?.data?.user || {
         id: response?.id || response?.userId || response?.data?.id || `usr_google_${Date.now()}`,
+        userId: response?.userId || response?.id,
         email,
         name: fullName,
         fullName,

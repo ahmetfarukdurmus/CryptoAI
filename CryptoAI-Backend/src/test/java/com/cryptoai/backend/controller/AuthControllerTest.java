@@ -109,4 +109,36 @@ class AuthControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
     }
+
+    @Test
+    @DisplayName("POST /api/auth/register güçlü şifre ile başarılı 200 OK dönmeli")
+    void testRegisterEndpointSuccess() throws Exception {
+        com.cryptoai.backend.dto.request.RegisterDto request = new com.cryptoai.backend.dto.request.RegisterDto("newuser@cryptoai.com", "StrongP@ss1", "New User");
+        com.cryptoai.backend.dto.response.RegisterResponse registerResponse = com.cryptoai.backend.dto.response.RegisterResponse.builder()
+                .message("Kayıt başarılı.")
+                .email("newuser@cryptoai.com")
+                .debugOtp("123456")
+                .build();
+
+        when(authService.register(any(com.cryptoai.backend.dto.request.RegisterDto.class)))
+                .thenReturn(com.cryptoai.backend.dto.response.ApiResponse.success("Kayıt başarılı.", registerResponse));
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.email").value("newuser@cryptoai.com"));
+    }
+
+    @Test
+    @DisplayName("POST /api/auth/register zayıf şifre ile 400 Bad Request dönmeli")
+    void testRegisterEndpointWeakPasswordBadRequest() throws Exception {
+        com.cryptoai.backend.dto.request.RegisterDto request = new com.cryptoai.backend.dto.request.RegisterDto("newuser@cryptoai.com", "weakpass", "New User");
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
 }

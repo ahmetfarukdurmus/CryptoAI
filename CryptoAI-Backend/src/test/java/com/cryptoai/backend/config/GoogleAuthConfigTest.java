@@ -18,7 +18,7 @@ class GoogleAuthConfigTest {
         assertNotNull(verifier);
         assertNotNull(verifier.getAudience());
         assertTrue(verifier.getAudience().contains(GoogleAuthConfig.DEFAULT_CLIENT_ID));
-        assertEquals("136078967221-i10ltkk78iplnbmgooelmu0ehqbhtmmu.apps.googleusercontent.com", GoogleAuthConfig.DEFAULT_CLIENT_ID);
+        assertEquals("135078967221-i10ltkk78iplnbmgoelmu0ehqbhtnmmu.apps.googleusercontent.com", GoogleAuthConfig.DEFAULT_CLIENT_ID);
     }
 
     @Test

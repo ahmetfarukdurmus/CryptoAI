@@ -12,9 +12,9 @@ import java.util.Collections;
 @Configuration
 public class GoogleAuthConfig {
 
-    public static final String DEFAULT_CLIENT_ID = "136078967221-i10ltkk78iplnbmgooelmu0ehqbhtmmu.apps.googleusercontent.com";
+    public static final String DEFAULT_CLIENT_ID = "135078967221-i10ltkk78iplnbmgoelmu0ehqbhtnmmu.apps.googleusercontent.com";
 
-    @Value("${app.google.client-id:136078967221-i10ltkk78iplnbmgooelmu0ehqbhtmmu.apps.googleusercontent.com}")
+    @Value("${app.google.client-id:135078967221-i10ltkk78iplnbmgoelmu0ehqbhtnmmu.apps.googleusercontent.com}")
     private String googleClientId;
 
     @Bean

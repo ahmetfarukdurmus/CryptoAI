@@ -49,13 +49,13 @@ app:
     secret: ${JWT_SECRET:c4b1d6f8e2a39158c70d4957e62a0487b92f39c4d8123e4f7a1b9c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f}
     expiration-ms: 86400000 # 24 saat (86400000 ms)
   google:
-    client-id: ${GOOGLE_CLIENT_ID:136078967221-i10ltkk78iplnbmgooelmu0ehqbhtmmu.apps.googleusercontent.com}
+    client-id: ${GOOGLE_CLIENT_ID:135078967221-i10ltkk78iplnbmgoelmu0ehqbhtnmmu.apps.googleusercontent.com}
   mail:
     from-name: "CryptoAI Security"
     from-email: ${MAIL_USERNAME:no-reply@cryptoai.com}
 
 google:
-  client-id: ${GOOGLE_CLIENT_ID:136078967221-i10ltkk78iplnbmgooelmu0ehqbhtmmu.apps.googleusercontent.com}
+  client-id: ${GOOGLE_CLIENT_ID:135078967221-i10ltkk78iplnbmgoelmu0ehqbhtnmmu.apps.googleusercontent.com}
 
 binance:
   api:

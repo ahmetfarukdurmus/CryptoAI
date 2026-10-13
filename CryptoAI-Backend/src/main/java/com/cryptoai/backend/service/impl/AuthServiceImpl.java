@@ -37,12 +37,17 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 @Service
 public class AuthServiceImpl implements AuthService {
 
     private static final Logger log = LoggerFactory.getLogger(AuthServiceImpl.class);
-    public static final String DEFAULT_GOOGLE_CLIENT_ID = "136078967221-i10ltkk78iplnbmgooelmu0ehqbhtmmu.apps.googleusercontent.com";
+    public static final String DEFAULT_GOOGLE_CLIENT_ID = "135078967221-i10ltkk78iplnbmgoelmu0ehqbhtnmmu.apps.googleusercontent.com";
+
+    public static final String PASSWORD_REGEX = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&#^()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?~`]).{8,}$";
+    public static final String PASSWORD_ERROR_MESSAGE = "Şifre en az 8 karakter olmalı, en az bir büyük harf (A-Z), bir küçük harf (a-z), bir rakam (0-9) ve bir özel karakter (@$!%*?&# vb.) içermelidir";
+    private static final Pattern PASSWORD_PATTERN = Pattern.compile(PASSWORD_REGEX);
 
     private final UserRepository userRepository;
     private final WalletRepository walletRepository;
@@ -51,7 +56,7 @@ public class AuthServiceImpl implements AuthService {
     private final EmailService emailService;
     private final GoogleIdTokenVerifier googleIdTokenVerifier;
 
-    @Value("${app.google.client-id:136078967221-i10ltkk78iplnbmgooelmu0ehqbhtmmu.apps.googleusercontent.com}")
+    @Value("${app.google.client-id:135078967221-i10ltkk78iplnbmgoelmu0ehqbhtnmmu.apps.googleusercontent.com}")
     private String googleClientId = DEFAULT_GOOGLE_CLIENT_ID;
 
     private static final int OTP_EXPIRATION_MINUTES = 10;
@@ -96,6 +101,10 @@ public class AuthServiceImpl implements AuthService {
     public ApiResponse<RegisterResponse> register(RegisterDto registerDto) {
         String normalizedEmail = registerDto.getEmail().trim().toLowerCase();
         log.info("Yeni kullanıcı kaydı başlatılıyor: {}", normalizedEmail);
+
+        if (registerDto.getPassword() == null || !PASSWORD_PATTERN.matcher(registerDto.getPassword()).matches()) {
+            throw new ApiException(PASSWORD_ERROR_MESSAGE, HttpStatus.BAD_REQUEST);
+        }
 
         if (userRepository.existsByEmail(normalizedEmail)) {
             throw new ApiException("Bu e-posta adresi ile kayıtlı bir kullanıcı zaten mevcut", HttpStatus.CONFLICT);
