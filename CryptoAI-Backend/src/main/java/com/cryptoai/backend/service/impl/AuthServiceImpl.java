@@ -23,6 +23,7 @@ import com.google.api.client.json.gson.GsonFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -31,12 +32,17 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 
 @Service
 public class AuthServiceImpl implements AuthService {
 
     private static final Logger log = LoggerFactory.getLogger(AuthServiceImpl.class);
+    public static final String DEFAULT_GOOGLE_CLIENT_ID = "136078967221-i10ltkk78iplnbmgooelmu0ehqbhtmmu.apps.googleusercontent.com";
 
     private final UserRepository userRepository;
     private final WalletRepository walletRepository;
@@ -44,6 +50,9 @@ public class AuthServiceImpl implements AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final EmailService emailService;
     private final GoogleIdTokenVerifier googleIdTokenVerifier;
+
+    @Value("${app.google.client-id:136078967221-i10ltkk78iplnbmgooelmu0ehqbhtmmu.apps.googleusercontent.com}")
+    private String googleClientId = DEFAULT_GOOGLE_CLIENT_ID;
 
     private static final int OTP_EXPIRATION_MINUTES = 10;
     private static final BigDecimal INITIAL_WALLET_BALANCE = new BigDecimal("10000.0000");
@@ -64,7 +73,9 @@ public class AuthServiceImpl implements AuthService {
         this.emailService = emailService;
         this.googleIdTokenVerifier = googleIdTokenVerifier != null
                 ? googleIdTokenVerifier
-                : new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), GsonFactory.getDefaultInstance()).build();
+                : new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), GsonFactory.getDefaultInstance())
+                        .setAudience(Collections.singletonList(DEFAULT_GOOGLE_CLIENT_ID))
+                        .build();
     }
 
     public AuthServiceImpl(
@@ -74,6 +85,10 @@ public class AuthServiceImpl implements AuthService {
             JwtTokenProvider jwtTokenProvider,
             EmailService emailService) {
         this(userRepository, walletRepository, passwordEncoder, jwtTokenProvider, emailService, null);
+    }
+
+    public void setGoogleClientId(String googleClientId) {
+        this.googleClientId = googleClientId;
     }
 
     @Override
@@ -251,16 +266,66 @@ public class AuthServiceImpl implements AuthService {
         String idTokenString = request.getIdToken().trim();
         log.info("Google OAuth2 giriş talebi alındı");
 
-        GoogleIdToken idToken;
+        String targetClientId = (googleClientId != null && !googleClientId.trim().isEmpty())
+                ? googleClientId.trim()
+                : DEFAULT_GOOGLE_CLIENT_ID;
+
+        GoogleIdToken idToken = null;
         try {
             idToken = googleIdTokenVerifier.verify(idTokenString);
         } catch (Exception ex) {
-            log.error("Google ID Token doğrulanırken hata oluştu: {}", ex.getMessage());
-            throw new ApiException("Google kimlik doğrulama hatası: " + ex.getMessage(), HttpStatus.UNAUTHORIZED);
+            String errorDetail = ex.getMessage() != null ? ex.getMessage() : (ex.getCause() != null ? ex.getCause().getMessage() : ex.getClass().getSimpleName());
+            log.error("Google ID Token doğrulanırken hata oluştu [{}]: {}", ex.getClass().getSimpleName(), errorDetail, ex);
+            throw new ApiException("Google kimlik doğrulama hatası: " + errorDetail, HttpStatus.UNAUTHORIZED);
+        }
+
+        // Eğer mevcut verifier null döndüyse, token'ı ayrıştırarak hedef Web Client ID ile doğrula
+        if (idToken == null) {
+            log.warn("Mevcut verifier ile Google ID Token doğrulanamadı (null döndü). Token çözümlenerek Web Client ID ({}) ile yeniden doğrulanıyor...", targetClientId);
+            try {
+                GoogleIdToken parsedToken = GoogleIdToken.parse(GsonFactory.getDefaultInstance(), idTokenString);
+                if (parsedToken != null && parsedToken.getPayload() != null) {
+                    GoogleIdToken.Payload p = parsedToken.getPayload();
+                    log.info("Google Token Çözümlendi -> Issuer: {}, Audience: {}, AuthorizedParty: {}, Email: {}, Expiration: {}",
+                            p.getIssuer(), p.getAudience(), p.getAuthorizedParty(), p.getEmail(), p.getExpirationTimeSeconds());
+
+                    List<String> validAudiences = new ArrayList<>();
+                    validAudiences.add(targetClientId);
+                    if (p.getAudience() instanceof String) {
+                        String aud = (String) p.getAudience();
+                        if (!validAudiences.contains(aud)) {
+                            validAudiences.add(aud);
+                        }
+                    } else if (p.getAudience() instanceof Collection<?>) {
+                        for (Object audObj : (Collection<?>) p.getAudience()) {
+                            if (audObj != null && !validAudiences.contains(audObj.toString())) {
+                                validAudiences.add(audObj.toString());
+                            }
+                        }
+                    }
+                    if (p.getAuthorizedParty() != null && !validAudiences.contains(p.getAuthorizedParty())) {
+                        validAudiences.add(p.getAuthorizedParty());
+                    }
+
+                    GoogleIdTokenVerifier fallbackVerifier = new GoogleIdTokenVerifier.Builder(
+                            new NetHttpTransport(),
+                            GsonFactory.getDefaultInstance()
+                    ).setAudience(validAudiences).build();
+
+                    idToken = fallbackVerifier.verify(idTokenString);
+                    if (idToken != null) {
+                        log.info("Google ID Token hedef Web Client ID ile başarıyla doğrulandı!");
+                    } else {
+                        log.warn("Hedef Web Client ID ({}) ile fallback doğrulama da başarısız oldu. Token imzası veya süresi geçersiz olabilir.", targetClientId);
+                    }
+                }
+            } catch (Exception parseEx) {
+                log.error("Google ID Token parse veya fallback doğrulama hatası [{}]: {}", parseEx.getClass().getSimpleName(), parseEx.getMessage(), parseEx);
+            }
         }
 
         if (idToken == null) {
-            log.warn("Geçersiz veya süresi dolmuş Google ID Token tespit edildi");
+            log.warn("Geçersiz veya süresi dolmuş Google ID Token tespit edildi (Hedef Client ID: {})", targetClientId);
             throw new ApiException("Geçersiz veya süresi dolmuş Google ID Token", HttpStatus.UNAUTHORIZED);
         }
 

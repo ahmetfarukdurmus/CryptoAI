@@ -12,7 +12,9 @@ import java.util.Collections;
 @Configuration
 public class GoogleAuthConfig {
 
-    @Value("${app.google.client-id:}")
+    public static final String DEFAULT_CLIENT_ID = "136078967221-i10ltkk78iplnbmgooelmu0ehqbhtmmu.apps.googleusercontent.com";
+
+    @Value("${app.google.client-id:136078967221-i10ltkk78iplnbmgooelmu0ehqbhtmmu.apps.googleusercontent.com}")
     private String googleClientId;
 
     @Bean
@@ -21,9 +23,10 @@ public class GoogleAuthConfig {
                 new NetHttpTransport(),
                 GsonFactory.getDefaultInstance()
         );
-        if (googleClientId != null && !googleClientId.trim().isEmpty()) {
-            builder.setAudience(Collections.singletonList(googleClientId.trim()));
-        }
+        String clientId = (googleClientId != null && !googleClientId.trim().isEmpty())
+                ? googleClientId.trim()
+                : DEFAULT_CLIENT_ID;
+        builder.setAudience(Collections.singletonList(clientId));
         return builder.build();
     }
 }
