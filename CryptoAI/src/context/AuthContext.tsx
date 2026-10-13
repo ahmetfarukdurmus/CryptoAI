@@ -224,7 +224,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const balance = walletRes.success ? walletRes.balance : 10000.0;
 
       const userObj = res.user || {};
-      const fullName = userObj.name || userObj.fullName || email.split('@')[0];
+      const fullName = userObj.fullName || (res as any)?.data?.fullName || userObj.name || (userObj.firstName ? (userObj.firstName + ' ' + (userObj.lastName || '')).trim() : '') || userObj.name || email.split('@')[0];
       const nameParts = fullName.trim().split(' ');
 
       const profile: UserProfile = {
@@ -269,7 +269,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const balance = walletRes.success ? walletRes.balance : 10000.0;
 
       const userObj = res.user || {};
-      const fullName = userObj.name || userObj.fullName || email.split('@')[0];
+      const fullName = userObj.fullName || (res as any)?.data?.fullName || userObj.name || (userObj.firstName ? (userObj.firstName + ' ' + (userObj.lastName || '')).trim() : '') || userObj.name || email.split('@')[0];
       const nameParts = fullName.trim().split(' ');
 
       const profile: UserProfile = {

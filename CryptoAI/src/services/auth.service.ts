@@ -92,9 +92,9 @@ class AuthService {
         response?.data?.token;
 
       // Kullanıcı nesnesi çözümleme
-      const userData = response?.user || response?.data?.user || {
+      const userData = response?.user || response?.data?.user || { fullName: response?.fullName, userId: response?.userId, 
         email: trimmedEmail,
-        name: response?.fullName || response?.name || trimmedEmail.split('@')[0],
+        name: response?.fullName || (response?.firstName ? (response?.firstName + ' ' + (response?.lastName || '')).trim() : '') || response?.name || trimmedEmail.split('@')[0],
       };
 
       if (token) {
@@ -140,9 +140,9 @@ class AuthService {
         response?.data?.accessToken ||
         response?.data?.token;
 
-      const userData = response?.user || response?.data?.user || {
+      const userData = response?.user || response?.data?.user || { fullName: response?.fullName, userId: response?.userId, 
         email: trimmedEmail,
-        name: response?.fullName || response?.name || trimmedEmail.split('@')[0],
+        name: response?.fullName || (response?.firstName ? (response?.firstName + ' ' + (response?.lastName || '')).trim() : '') || response?.name || trimmedEmail.split('@')[0],
       };
 
       if (token) {
@@ -160,7 +160,7 @@ class AuthService {
         data: response,
       };
     } catch (error: any) {
-      console.error('Auth login error:', error);
+      // console.error('Auth login error:', error);
       return {
         success: false,
         error: error instanceof ApiError ? error.message : (error?.message || 'E-posta veya şifre hatalı.'),
@@ -177,10 +177,30 @@ class AuthService {
    */
   async googleLogin(idToken: string): Promise<AuthResponse> {
     try {
+      if (!idToken || typeof idToken !== 'string' || !idToken.trim()) {
+        console.error('Auth googleLogin: idToken boş veya tanımsızdır!', idToken);
+        return {
+          success: false,
+          error: 'Google ID Token boş veya geçersiz.',
+        };
+      }
+
       const trimmedToken = idToken.trim();
-      const response = await apiClient.post('/api/v1/auth/google', {
+      const payload: GoogleLoginPayload = {
         idToken: trimmedToken,
-      });
+      };
+
+      // Spring Boot backend endpoint (/api/auth/google veya /api/v1/auth/google)
+      let response: any;
+      try {
+        response = await apiClient.post('/api/auth/google', payload);
+      } catch (err: any) {
+        if (err?.status === 404) {
+          response = await apiClient.post('/api/v1/auth/google', payload);
+        } else {
+          throw err;
+        }
+      }
 
       // Token çözümleme: jwtToken, accessToken, token vb.
       const token =
@@ -205,7 +225,7 @@ class AuthService {
       const firstName = response?.firstName || nameParts[0] || 'Google';
       const lastName = response?.lastName || nameParts.slice(1).join(' ') || '';
 
-      const userData = response?.user || response?.data?.user || {
+      const userData = response?.user || response?.data?.user || { fullName: response?.fullName, userId: response?.userId, 
         id: response?.id || response?.userId || response?.data?.id || `usr_google_${Date.now()}`,
         email,
         name: fullName,

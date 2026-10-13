@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -13,10 +13,16 @@ import { authStyles as styles } from '../../styles/authStyles';
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function LoginScreen() {
-  const { loginWithEmail } = useAuth();
+  const { loginWithEmail, isAuthenticated } = useAuth();
   const { signInWithGoogle, loading: googleLoading } = useGoogleAuth();
   const { t } = useLanguage();
   const { colors } = useTheme();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace('/(tabs)');
+    }
+  }, [isAuthenticated]);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -34,7 +40,9 @@ export default function LoginScreen() {
   const handleGoogleSignIn = async () => {
     const res = await signInWithGoogle();
     if (res.success) {
-      router.replace('/(tabs)');
+      if (isAuthenticated) {
+        router.replace('/(tabs)');
+      }
     } else if (!res.cancelled) {
       showAlert('Giriş Başarısız', res.error || 'Google ile giriş yapılamadı.');
     }
